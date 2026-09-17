@@ -125,7 +125,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import Header from './components/common/Header.vue'
 import Footer from './components/common/Footer.vue'
 import Home from './components/views/Home.vue'
@@ -416,17 +416,6 @@ export default {
       </div>`
     }
     
-
-    // Initialize
-    onMounted(() => {
-      console.log('Admin Test Credentials:')
-      console.log('Email: admin@blogsphere.com')
-      console.log('Password: Admin123!')
-      console.log('Regular User: janedoe@example.com / JaneDoe123')
-    }
-
-  
-  )
 
     return {
       // Auth

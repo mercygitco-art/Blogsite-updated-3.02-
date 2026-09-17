@@ -168,7 +168,7 @@
                 }"
                 ref="postContent"
             >
-                <div v-html="post.content"></div>
+                <div v-html="sanitizedContent"></div>
             </article>
 
             <!-- Post Tags -->
@@ -370,6 +370,8 @@
 </template>
 
 <script>
+import DOMPurify from 'dompurify'
+
 export default {
     name: 'BlogPost',
     props: {
@@ -419,6 +421,9 @@ export default {
         }
     },
     computed: {
+        sanitizedContent() {
+            return DOMPurify.sanitize(this.post?.content || '')
+        },
         showTableOfContents() {
             return this.headings.length > 2 // Only show if there are more than 2 headings
         }

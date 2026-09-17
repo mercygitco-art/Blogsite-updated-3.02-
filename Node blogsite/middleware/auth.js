@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const getTokenFromHeader = (req) => {
+  if (req.cookies?.auth_token) return req.cookies.auth_token;
   const auth = req.headers.authorization || req.headers.Authorization;
   if (!auth) return null;
   const parts = auth.split(' ');
@@ -13,7 +14,7 @@ const authenticate = async (req, res, next) => {
   try {
     const token = getTokenFromHeader(req);
     if (!token) return res.status(401).json({ success: false, message: 'No token provided' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     // attach user minimal info
     req.user = decoded.user || decoded;
     // if token contains id and not full user, attempt to load user

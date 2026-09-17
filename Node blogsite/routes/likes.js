@@ -19,7 +19,8 @@ router.get('/post/:postId', async (req, res) => {
 // Check if user liked a post
 router.get('/check/:userId/:postId', async (req, res) => {
   try {
-    const like = await Like.findOne({ userId: req.params.userId, postId: req.params.postId });
+    if (req.params.userId !== req.user.id) return res.status(403).json({ message: 'Not allowed' });
+    const like = await Like.findOne({ userId: req.user.id, postId: req.params.postId });
     res.json({ liked: !!like, type: like ? like.type : null });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -29,7 +30,7 @@ router.get('/check/:userId/:postId', async (req, res) => {
 // Like a post
 router.post('/', async (req, res) => {
   const like = new Like({
-    userId: req.body.userId,
+    userId: req.user.id,
     postId: req.body.postId,
     type: req.body.type
   });
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
 // Update like type
 router.put('/:id', async (req, res) => {
   try {
-    const like = await Like.findByIdAndUpdate(req.params.id, { type: req.body.type }, { new: true });
+    const like = await Like.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { type: req.body.type }, { new: true });
     if (!like) return res.status(404).json({ message: 'Like not found' });
     res.json(like);
   } catch (error) {
@@ -59,7 +60,8 @@ router.put('/:id', async (req, res) => {
 // Unlike a post
 router.delete('/:userId/:postId', async (req, res) => {
   try {
-    const like = await Like.findOneAndDelete({ userId: req.params.userId, postId: req.params.postId });
+    if (req.params.userId !== req.user.id) return res.status(403).json({ message: 'Not allowed' });
+    const like = await Like.findOneAndDelete({ userId: req.user.id, postId: req.params.postId });
     if (!like) return res.status(404).json({ message: 'Like not found' });
     res.json({ message: 'Like removed' });
   } catch (error) {

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Comment = require('../models/Comment');
 const { authenticate } = require('../middleware/auth');
+const sanitizeHtml = require('sanitize-html');
 
 // GET /api/posts/:id/comments  (this router will be mounted at /api/posts)
 router.get('/:id/comments', async (req, res) => {
@@ -15,12 +16,18 @@ router.get('/:id/comments', async (req, res) => {
 });
 
 // POST /api/posts/:id/comments
-router.post('/:id/comments', async (req, res) => {
+router.post('/:id/comments', authenticate, async (req, res) => {
   try {
     const postId = req.params.id;
-    const { authorId, authorName, content } = req.body;
+    const { content } = req.body;
     if (!content) return res.status(400).json({ success: false, message: 'Content required' });
-    const comment = new Comment({ postId, authorId, authorName: authorName || 'Guest', content, status: 'pending' });
+    const comment = new Comment({
+      postId,
+      authorId: req.user.id,
+      authorName: req.user.name,
+      content: sanitizeHtml(content, { allowedTags: [], allowedAttributes: {} }),
+      status: 'pending'
+    });
     await comment.save();
     res.status(201).json({ success: true, comment });
   } catch (err) {
@@ -29,15 +36,19 @@ router.post('/:id/comments', async (req, res) => {
 });
 
 // PUT /api/comments/:id (author or admin)
-router.put('/comment/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const c = await Comment.findById(req.params.id);
     if (!c) return res.status(404).json({ success: false, message: 'Comment not found' });
     if (c.authorId && c.authorId.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not allowed' });
     }
-    c.content = req.body.content ?? c.content;
-    c.status = req.body.status ?? c.status;
+    if (req.body.content !== undefined) {
+      c.content = sanitizeHtml(req.body.content, { allowedTags: [], allowedAttributes: {} });
+    }
+    if (req.user.role === 'admin' && req.body.status !== undefined) {
+      c.status = req.body.status;
+    }
     await c.save();
     res.status(200).json({ success: true, comment: c });
   } catch (err) {
@@ -46,7 +57,7 @@ router.put('/comment/:id', authenticate, async (req, res) => {
 });
 
 // DELETE /api/comments/:id (author or admin)
-router.delete('/comment/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const c = await Comment.findById(req.params.id);
     if (!c) return res.status(404).json({ success: false, message: 'Comment not found' });

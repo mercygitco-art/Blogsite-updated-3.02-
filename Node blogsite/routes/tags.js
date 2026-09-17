@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Tag = require('../models/Tag');
 const slugify = require('slugify');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
 // Get all tags
 router.get('/', async (req, res) => {
@@ -25,7 +26,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create tag
-router.post('/', async (req, res) => {
+router.post('/', authenticate, requireAdmin, async (req, res) => {
   const tag = new Tag({
     name: req.body.name,
     slug: req.body.slug || slugify(req.body.name, { lower: true, strict: true })
@@ -39,7 +40,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update tag
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const tag = await Tag.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!tag) return res.status(404).json({ message: 'Tag not found' });
@@ -50,7 +51,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete tag
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const tag = await Tag.findByIdAndDelete(req.params.id);
     if (!tag) return res.status(404).json({ message: 'Tag not found' });

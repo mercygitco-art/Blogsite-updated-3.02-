@@ -23,6 +23,7 @@ const connectDB = async () => {
     console.error('MongoDB connection error:', error.message);
     // Don't exit, allow server to run without DB for now
     console.log('Server running but MongoDB unavailable - will retry');
+    throw error;
   }
 };
 

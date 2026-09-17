@@ -536,7 +536,7 @@ export function usePosts(currentUser) {
         }
     ])
 
-    // Fetch posts from API with fallback to mock data
+    // Posts are loaded from the backend; mock data remains available for development inspection only.
     const fetchPosts = async (params = {}) => {
         loading.value = true
         error.value = ''
@@ -546,9 +546,9 @@ export function usePosts(currentUser) {
             posts.value = response.posts || response
             return posts.value
         } catch (apiError) {
-            console.warn('API fetch posts failed, using mock data:', apiError.message)
-            // Keep existing mock data as fallback
-            return posts.value
+            error.value = apiError.response?.data?.message || 'Unable to load posts from the server.'
+            posts.value = []
+            throw apiError
         } finally {
             loading.value = false
         }

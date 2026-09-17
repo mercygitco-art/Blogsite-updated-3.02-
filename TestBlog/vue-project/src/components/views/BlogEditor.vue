@@ -159,7 +159,7 @@
                                 <option value="devops">DevOps</option>
                                 <option value="career">Career</option>
                                 <option value="tutorials">Tutorials</option>
-                                <option value="news">Industry News</option>
+                                <option value="news">News</option>
                             </select>
                             <div v-if="errors.category" class="error-message">
                                 <i class="fas fa-exclamation-circle"></i>
@@ -910,7 +910,7 @@ export default {
                 'devops': 'DevOps',
                 'career': 'Career',
                 'tutorials': 'Tutorials',
-                'news': 'Industry News'
+                'news': 'News'
             }
             return categories[category] || category
         }

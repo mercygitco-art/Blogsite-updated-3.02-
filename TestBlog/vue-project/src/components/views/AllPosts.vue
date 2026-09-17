@@ -167,6 +167,8 @@
 <script>
 import BlogCard from '../common/BlogCard.vue'
 
+import { CATEGORY_DEFINITIONS } from '../../config/categories.js'
+
 export default {
     name: 'AllPosts',
     components: {
@@ -198,44 +200,12 @@ export default {
     computed: {
         categories() {
             const categoryCounts = this.getCategoryCounts()
-            return [
-                { 
-                    id: 'all', 
-                    name: 'All', 
-                    icon: 'fas fa-th',
-                    count: this.posts.length
-                },
-                { 
-                    id: 'technology', 
-                    name: 'Technology', 
-                    icon: 'fas fa-laptop-code',
-                    count: categoryCounts.technology || 0
-                },
-                { 
-                    id: 'lifestyle', 
-                    name: 'Lifestyle', 
-                    icon: 'fas fa-heart',
-                    count: categoryCounts.lifestyle || 0
-                },
-                { 
-                    id: 'business', 
-                    name: 'Business', 
-                    icon: 'fas fa-chart-line',
-                    count: categoryCounts.business || 0
-                },
-                { 
-                    id: 'travel', 
-                    name: 'Travel', 
-                    icon: 'fas fa-plane',
-                    count: categoryCounts.travel || 0
-                },
-                { 
-                    id: 'food', 
-                    name: 'Food', 
-                    icon: 'fas fa-utensils',
-                    count: categoryCounts.food || 0
-                }
-            ]
+            return CATEGORY_DEFINITIONS.map(category => ({
+                ...category,
+                count: category.id === 'all'
+                    ? this.posts.length
+                    : categoryCounts[category.id] || 0
+            }))
         },
         filteredPosts() {
             let filtered = this.posts || []

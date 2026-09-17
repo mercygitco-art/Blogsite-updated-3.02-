@@ -3,6 +3,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { authenticate } = require('../middleware/auth');
+
+const sessionCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+};
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -30,9 +38,10 @@ router.post('/login', async (req, res) => {
     if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    const token = jwt.sign({ user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role } }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    const token = jwt.sign({ user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role } }, process.env.JWT_SECRET, { expiresIn: '7d' });
     const out = user.toObject(); delete out.password;
-    res.status(200).json({ success: true, token, user: out });
+    res.cookie('auth_token', token, sessionCookieOptions);
+    res.status(200).json({ success: true, user: out });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Login error', error: err.message });
   }
@@ -48,23 +57,61 @@ router.post('/admin/login', async (req, res) => {
       if (!user) return res.status(401).json({ success: false, message: 'Invalid admin credentials' });
       const match = await bcrypt.compare(password, user.password);
       if (!match || user.role !== 'admin') return res.status(401).json({ success: false, message: 'Invalid admin credentials' });
-      const token = jwt.sign({ user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role } }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+      const token = jwt.sign({ user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role } }, process.env.JWT_SECRET, { expiresIn: '7d' });
       const out = user.toObject(); delete out.password;
-      return res.status(200).json({ success: true, token, user: out });
-    }
-
-    // If no email provided, allow ADMIN_PASSWORD env fallback
-    const { password: pwd } = req.body;
-    if (process.env.ADMIN_PASSWORD && pwd === process.env.ADMIN_PASSWORD) {
-      const adminUser = { id: 'admin', name: 'Admin', email: '', role: 'admin' };
-      const token = jwt.sign({ user: adminUser }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-      return res.status(200).json({ success: true, token, user: adminUser });
+      res.cookie('auth_token', token, sessionCookieOptions);
+      return res.status(200).json({ success: true, user: out });
     }
 
     res.status(401).json({ success: false, message: 'Invalid admin credentials' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Admin login error', error: err.message });
   }
+});
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('auth_token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+  res.json({ success: true });
+});
+
+router.get('/profile', authenticate, async (req, res) => {
+  const user = await User.findById(req.user.id).select('-password');
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  res.json({ success: true, user });
+});
+
+router.put('/profile', authenticate, async (req, res) => {
+  const updates = {};
+  for (const field of ['name', 'bio', 'website', 'avatar']) {
+    if (req.body[field] !== undefined) updates[field] = req.body[field];
+  }
+
+  const user = await User.findByIdAndUpdate(req.user.id, updates, {
+    new: true,
+    runValidators: true
+  }).select('-password');
+
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  res.json({ success: true, user });
+});
+
+router.put('/change-password', authenticate, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Current and new passwords are required' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 8 characters' });
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+    return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+  }
+
+  user.password = await bcrypt.hash(newPassword, 12);
+  await user.save();
+  res.json({ success: true, message: 'Password changed successfully' });
 });
 
 module.exports = router;

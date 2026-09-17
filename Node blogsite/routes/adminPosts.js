@@ -3,6 +3,16 @@ const router = express.Router();
 const Post = require('../models/Post');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const slugify = require('slugify');
+const sanitizeHtml = require('sanitize-html');
+
+const cleanPostHtml = (content) => sanitizeHtml(content, {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    img: ['src', 'alt', 'width', 'height']
+  },
+  allowedSchemes: ['http', 'https']
+});
 
 // All admin routes require authentication and admin role
 router.use(authenticate, requireAdmin);
@@ -15,7 +25,7 @@ router.post('/', async (req, res) => {
     const post = new Post({
       title: body.title,
       excerpt: body.excerpt || (body.content || '').substring(0, 150),
-      content: body.content,
+      content: cleanPostHtml(body.content),
       categoryId: body.categoryId,
       image: body.image,
       authorId: req.user.id || undefined,
@@ -41,7 +51,7 @@ router.put('/:id', async (req, res) => {
     Object.assign(post, {
       title: body.title ?? post.title,
       excerpt: body.excerpt ?? post.excerpt,
-      content: body.content ?? post.content,
+      content: body.content === undefined ? post.content : cleanPostHtml(body.content),
       categoryId: body.categoryId ?? post.categoryId,
       image: body.image ?? post.image,
       status: body.status ?? post.status,

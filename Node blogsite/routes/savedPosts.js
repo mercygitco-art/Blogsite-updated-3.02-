@@ -9,7 +9,8 @@ router.use(authenticate);
 // Get saved posts for a user
 router.get('/user/:userId', async (req, res) => {
   try {
-    const savedPosts = await SavedPost.find({ userId: req.params.userId }).populate('postId');
+    if (req.params.userId !== req.user.id) return res.status(403).json({ message: 'Not allowed' });
+    const savedPosts = await SavedPost.find({ userId: req.user.id }).populate('postId');
     res.json(savedPosts);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -19,7 +20,8 @@ router.get('/user/:userId', async (req, res) => {
 // Check if post is saved by user
 router.get('/check/:userId/:postId', async (req, res) => {
   try {
-    const saved = await SavedPost.findOne({ userId: req.params.userId, postId: req.params.postId });
+    if (req.params.userId !== req.user.id) return res.status(403).json({ message: 'Not allowed' });
+    const saved = await SavedPost.findOne({ userId: req.user.id, postId: req.params.postId });
     res.json({ saved: !!saved });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -29,7 +31,7 @@ router.get('/check/:userId/:postId', async (req, res) => {
 // Save a post
 router.post('/', async (req, res) => {
   const savedPost = new SavedPost({
-    userId: req.body.userId,
+    userId: req.user.id,
     postId: req.body.postId
   });
   try {
@@ -47,7 +49,8 @@ router.post('/', async (req, res) => {
 // Unsave a post
 router.delete('/:userId/:postId', async (req, res) => {
   try {
-    const savedPost = await SavedPost.findOneAndDelete({ userId: req.params.userId, postId: req.params.postId });
+    if (req.params.userId !== req.user.id) return res.status(403).json({ message: 'Not allowed' });
+    const savedPost = await SavedPost.findOneAndDelete({ userId: req.user.id, postId: req.params.postId });
     if (!savedPost) return res.status(404).json({ message: 'Saved post not found' });
     res.json({ message: 'Post unsaved' });
   } catch (error) {

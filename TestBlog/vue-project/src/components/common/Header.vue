@@ -297,6 +297,8 @@ const clickOutside = {
     }
 };
 
+import { CATEGORY_DEFINITIONS } from '../../config/categories.js'
+
 export default {
     name: 'AdvancedHeader',
     directives: {
@@ -332,17 +334,10 @@ export default {
     ],
     data() {
         return {
-            categories: [
-                { id: 'all', name: 'Home', icon: 'fas fa-home' },
-                { id: 'technology', name: 'Technology', icon: 'fas fa-laptop-code' },
-                { id: 'lifestyle', name: 'Lifestyle', icon: 'fas fa-heart' },
-                { id: 'business', name: 'Business', icon: 'fas fa-chart-line' },
-                { id: 'travel', name: 'Travel', icon: 'fas fa-plane' },
-                { id: 'food', name: 'Food', icon: 'fas fa-utensils' },
-                { id: 'health', name: 'Health', icon: 'fas fa-heartbeat' },
-                { id: 'science', name: 'Science', icon: 'fas fa-flask' },
-                { id: 'entertainment', name: 'Entertainment', icon: 'fas fa-film' }
-            ],
+            categories: CATEGORY_DEFINITIONS.map(category => ({
+                ...category,
+                name: category.navName || category.name
+            })),
             dropdownOpen: false,
             dropdownHover: false,
             userMenuOpen: false,

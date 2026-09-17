@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
+const Category = require('../models/Category');
 
 // GET /api/posts?page=&limit=&q=&tag=&category=
 router.get('/', async (req, res) => {
@@ -18,7 +19,15 @@ router.get('/', async (req, res) => {
       { content: { $regex: q, $options: 'i' } }
     ];
     if (tag) filter.tags = tag;
-    if (category) filter.category = category;
+    if (category) {
+      const categoryDoc = await Category.findOne({ slug: category }).select('_id');
+
+      if (!categoryDoc) {
+        return res.status(200).json({ success: true, posts: [], total: 0, page });
+      }
+
+      filter.categoryId = categoryDoc._id;
+    }
 
     const total = await Post.countDocuments(filter);
     const posts = await Post.find(filter)
