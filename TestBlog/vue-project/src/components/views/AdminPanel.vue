@@ -175,14 +175,6 @@
               <i class="fas fa-heart"></i>
               {{ post.likes || 0 }}
             </div>
-            <div class="stat-item">
-              <i class="fas fa-eye"></i>
-              {{ post.views || 0 }}
-            </div>
-            <div class="stat-item">
-              <i class="fas fa-comment"></i>
-              {{ post.comments || 0 }}
-            </div>
           </div>
 
           <div class="post-actions">

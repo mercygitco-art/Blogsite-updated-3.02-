@@ -79,14 +79,6 @@
                                                 <i class="fas fa-heart"></i>
                                                 {{ formatNumber(latestPost.likes || 0) }}
                                             </span>
-                                            <span class="stat-item">
-                                                <i class="fas fa-comment"></i>
-                                                {{ formatNumber(latestPost.comments || 0) }}
-                                            </span>
-                                            <span class="stat-item">
-                                                <i class="fas fa-eye"></i>
-                                                {{ formatNumber(latestPost.views || 0) }}
-                                            </span>
                                         </div>
                                     </div>
                                     <div v-else class="post-preview loading">

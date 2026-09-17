@@ -137,23 +137,6 @@
                     </button>
                     
                     <button
-                        class="post-stat comment-btn"
-                        @click.stop="$emit('view-post', post.id)"
-                        title="View comments"
-                    >
-                        <i class="fas fa-comment"></i>
-                        <span class="stat-count">{{ formattedComments }}</span>
-                    </button>
-
-                    <button
-                        class="post-stat view-btn"
-                        title="Post views"
-                    >
-                        <i class="fas fa-eye"></i>
-                        <span class="stat-count">{{ formattedViews }}</span>
-                    </button>
-
-                    <button
                         class="post-stat share-btn"
                         @click.stop="openShareMenu"
                         title="Share post"
@@ -313,23 +296,6 @@ export default {
                 return (likes / 1000).toFixed(1) + 'k';
             }
             return likes.toString();
-        },
-        formattedComments() {
-            const comments = this.post.comments || 0;
-            if (comments >= 1000) {
-                return (comments / 1000).toFixed(1) + 'k';
-            }
-            return comments.toString();
-        },
-        formattedViews() {
-            const views = this.post.views || 0;
-            if (views >= 1000000) {
-                return (views / 1000000).toFixed(1) + 'M';
-            }
-            if (views >= 1000) {
-                return (views / 1000).toFixed(1) + 'k';
-            }
-            return views.toString();
         },
         avatarStyle() {
             if (this.post.authorColor) {

@@ -1,4 +1,4 @@
-/* UI Fixes for header, actions, and newsletter spacing */
+/* UI fixes for header and actions */
 .post-actions-clean {
     display: flex;
     align-items: center;
@@ -20,9 +20,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-}
-.newsletter-cta {
-    margin-top: 2.5rem !important;
 }
 <template>
     <div class="blog-post-container">
@@ -124,10 +121,6 @@
                         <div class="stat-item" v-if="post.wordCount">
                             <i class="fas fa-file-alt"></i>
                             <span>{{ post.wordCount }} words</span>
-                        </div>
-                        <div class="stat-item" v-if="post.views !== undefined">
-                            <i class="fas fa-eye"></i>
-                            <span>{{ formatNumber(post.views) }} views</span>
                         </div>
                     </div>
                 </div>
@@ -322,21 +315,6 @@
                 </div>
             </div>
 
-
-
-            <!-- Newsletter Subscription -->
-            <div class="newsletter-cta">
-                <div class="newsletter-content">
-                    <i class="fas fa-envelope"></i>
-                    <div class="newsletter-text">
-                        <h3>Enjoyed this article?</h3>
-                        <p>Subscribe to our newsletter for more great content</p>
-                    </div>
-                    <button class="btn btn-primary" @click="$emit('subscribe-newsletter')">
-                        Subscribe
-                    </button>
-                </div>
-            </div>
         </div>
 
         <!-- Reading Progress Bar -->
@@ -423,7 +401,6 @@ export default {
         'back-to-home',
         'tag-click',
         'post-click',
-        'subscribe-newsletter'
     ],
     data() {
         return {
@@ -1434,46 +1411,6 @@ export default {
     font-weight: 500;
 }
 
-/* Newsletter CTA */
-.newsletter-cta {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
-    padding: 2rem;
-    margin: 3rem 0;
-    text-align: center;
-}
-
-.newsletter-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 2rem;
-    max-width: 600px;
-    margin: 0 auto;
-    flex-wrap: wrap;
-}
-
-.newsletter-content i {
-    font-size: 2.5rem;
-    opacity: 0.9;
-}
-
-.newsletter-text {
-    flex: 1;
-    text-align: left;
-}
-
-.newsletter-text h3 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.5rem;
-}
-
-.newsletter-text p {
-    margin: 0;
-    opacity: 0.9;
-}
-
 /* Reading Progress */
 .reading-progress {
     position: fixed;
@@ -1690,15 +1627,6 @@ export default {
         width: 100%;
     }
 
-    .newsletter-content {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .newsletter-text {
-        text-align: center;
-    }
-
     .related-grid {
         grid-template-columns: 1fr;
     }
@@ -1737,7 +1665,6 @@ export default {
     .post-navigation,
     .social-share-top,
     .post-actions,
-    .newsletter-cta,
     .back-to-top {
         display: none !important;
     }
