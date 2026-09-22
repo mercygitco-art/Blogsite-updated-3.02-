@@ -724,7 +724,13 @@ export default {
                     break
             }
             
-            errors.value = { ...errors.value, ...fieldErrors }
+            const nextErrors = { ...errors.value }
+            if (fieldErrors[field]) {
+                nextErrors[field] = fieldErrors[field]
+            } else {
+                delete nextErrors[field]
+            }
+            errors.value = nextErrors
         }
 
         const isValidImageUrl = (url) => {
