@@ -29,7 +29,7 @@
                 <div class="status-item">
                     <span class="status-label">Status:</span>
                     <span class="status-badge" :class="formData.status">
-                        {{ formData.status === 'draft' ? 'Draft' : (formData.status === 'pending' ? 'Pending Approval' : 'Published') }}
+                        {{ formData.status === 'draft' ? 'Draft' : (formData.status === 'archived' ? 'Archived' : 'Published') }}
                     </span>
                 </div>
                 <div class="status-item" v-if="post">
@@ -946,13 +946,9 @@ export default {
             loading.value = true
 
             try {
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1500))
-                
                 const postData = {
                     ...formData.value,
-                    // Set status: admin can publish, user goes to pending
-                    status: isDraft ? 'draft' : (currentUser && currentUser.role === 'admin' ? 'approved' : 'pending'),
+                    status: isDraft ? 'draft' : 'published',
                     wordCount: wordCount.value,
                     readingTime: readingTime.value,
                     updatedAt: new Date().toISOString(),

@@ -14,32 +14,20 @@ export const postsAPI = {
   },
 
   // Create new post
-  async createPost(postData) {
-    const response = await api.post('/posts', postData)
+  async createPost(postData, isAdmin = false) {
+    const response = await api.post(isAdmin ? '/admin/posts' : '/posts', postData)
     return response.data
   },
 
   // Update post
-  async updatePost(id, postData) {
-    const response = await api.put(`/posts/${id}`, postData)
+  async updatePost(id, postData, isAdmin = false) {
+    const response = await api.put(`${isAdmin ? '/admin/posts' : '/posts'}/${id}`, postData)
     return response.data
   },
 
   // Delete post
-  async deletePost(id) {
-    const response = await api.delete(`/posts/${id}`)
-    return response.data
-  },
-
-  // Like/unlike post
-  async toggleLike(id) {
-    const response = await api.post(`/posts/${id}/like`)
-    return response.data
-  },
-
-  // Get posts by category
-  async getPostsByCategory(category) {
-    const response = await api.get(`/posts/category/${category}`)
+  async deletePost(id, isAdmin = false) {
+    const response = await api.delete(`${isAdmin ? '/admin/posts' : '/posts'}/${id}`)
     return response.data
   },
 

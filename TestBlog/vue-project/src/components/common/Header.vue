@@ -298,6 +298,7 @@ const clickOutside = {
 };
 
 import { CATEGORY_DEFINITIONS } from '../../config/categories.js'
+import { postsAPI } from '../../api/index.js'
 
 export default {
     name: 'AdvancedHeader',
@@ -485,27 +486,24 @@ export default {
             }, 500);
         },
         
-        performSearch(query) {
-            // Simulate search results - in a real app, this would be an API call
-            const mockResults = [
-                { id: 1, title: 'Getting Started with Vue.js', category: 'Technology' },
-                { id: 2, title: 'Advanced CSS Techniques', category: 'Technology' },
-                { id: 3, title: 'Healthy Lifestyle Tips', category: 'Lifestyle' },
-                { id: 4, title: 'Business Growth Strategies', category: 'Business' }
-            ].filter(item => 
-                item.title.toLowerCase().includes(query.toLowerCase()) ||
-                item.category.toLowerCase().includes(query.toLowerCase())
-            );
-            
-            this.searchResults = mockResults;
-            this.$emit('search', query);
+        async performSearch(query) {
+            try {
+                const response = await postsAPI.searchPosts(query)
+                this.searchResults = (response.posts || []).map(post => ({
+                    id: post._id || post.id,
+                    title: post.title,
+                    category: post.categoryId?.name || 'Uncategorized'
+                }))
+                this.$emit('search', query)
+            } catch {
+                this.searchResults = []
+            }
         },
         
         executeSearch() {
             if (this.searchQuery.trim()) {
                 this.$emit('search', this.searchQuery);
-                // In a real app, you might navigate to search results page
-                console.log('Executing search for:', this.searchQuery);
+                this.performSearch(this.searchQuery)
             }
         },
         

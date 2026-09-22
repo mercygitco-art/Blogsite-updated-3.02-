@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan');
 const helmet = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
@@ -9,7 +8,10 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const { authenticate, requireAdmin } = require('./middleware/auth');
+const { issueCsrfToken, requireCsrf } = require('./middleware/csrf');
+const { requestLogger, writeLog } = require('./middleware/logger');
 const connectDB = require('./config/database');
 const postRoutes = require('./routes/posts');
 const authRoutes = require('./routes/auth');
@@ -19,6 +21,7 @@ const categoryRoutes = require('./routes/categories');
 const tagRoutes = require('./routes/tags');
 const likeRoutes = require('./routes/likes');
 const savedPostRoutes = require('./routes/savedPosts');
+const reactionRoutes = require('./routes/reactions');
 const Category = require('./models/Category');
 
 const app = express();
@@ -43,16 +46,16 @@ connectDB()
       },
       { upsert: true }
     );
-    console.log(`News category ready (${result.upsertedCount ? 'created' : 'already exists'})`);
+    writeLog('info', 'news_category_ready', { created: Boolean(result.upsertedCount) });
   })
   .catch(err => {
-    console.error('DB connection failed, continuing without DB:', err.message);
+    writeLog('error', 'database_connection_failed', { message: err.message });
   });
 
 // Middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Gzip compression
-app.use(morgan('combined')); // Logging
+app.use(requestLogger);
 const configuredOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 if (process.env.NODE_ENV === 'production' && !configuredOrigin.startsWith('https://')) {
   throw new Error('FRONTEND_URL must use HTTPS in production');
@@ -71,6 +74,26 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('public'));
+app.get('/api/auth/csrf', issueCsrfToken);
+app.use('/api', requireCsrf);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many authentication attempts. Try again later.' }
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/admin/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/upload', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many uploads. Try again later.' }
+}));
 
 // Multer config for file uploads
 const uploadDirectory = path.join(__dirname, 'uploads');
@@ -115,7 +138,13 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 app.use('/api/posts', postRoutes);
-app.use('/api/posts', commentsRoutes);
+app.use('/api/posts', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many comment requests. Try again later.' }
+}), commentsRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/posts', adminPostRoutes);
@@ -123,14 +152,19 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/saved-posts', savedPostRoutes);
+app.use('/api/reactions', reactionRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  writeLog('error', 'unhandled_request_error', {
+    requestId: req.requestId,
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
   res.status(500).json({
     success: false,
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
@@ -144,6 +178,5 @@ app.use((req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
+  writeLog('info', 'server_started', { port: PORT, environment: process.env.NODE_ENV });
 });

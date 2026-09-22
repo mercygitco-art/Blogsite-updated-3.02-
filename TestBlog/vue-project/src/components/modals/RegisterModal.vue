@@ -864,30 +864,16 @@ export default {
       }
     }
 
-    // Availability checks (simulated)
+    // Registration remains authoritative for uniqueness; avoid client-side guesses.
     const checkEmailAvailability = async () => {
       checkingEmail.value = true
       isEmailUnique.value = null
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Simulate check - in real app, this would be an API call
-      const takenEmails = ['test@example.com', 'user@gmail.com']
-      isEmailUnique.value = !takenEmails.includes(formData.value.email.toLowerCase())
       checkingEmail.value = false
     }
 
     const checkUsernameAvailability = async () => {
       checkingUsername.value = true
       isUsernameUnique.value = null
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      // Simulate check - in real app, this would be an API call
-      const takenUsernames = ['admin', 'testuser', 'demo']
-      isUsernameUnique.value = !takenUsernames.includes(formData.value.username.toLowerCase())
       checkingUsername.value = false
     }
 

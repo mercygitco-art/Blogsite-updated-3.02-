@@ -45,6 +45,7 @@
         :comments="postComments"
         :is-liked="isPostLiked"
         @toggle-like="toggleLike"
+        @toggle-save="toggleSave"
         @add-comment="addComment"
         @share-post="sharePost"
         @back-to-home="showHomeView"

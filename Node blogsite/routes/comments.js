@@ -20,7 +20,9 @@ router.post('/:id/comments', authenticate, async (req, res) => {
   try {
     const postId = req.params.id;
     const { content } = req.body;
-    if (!content) return res.status(400).json({ success: false, message: 'Content required' });
+    if (!content || content.trim().length > 5000) {
+      return res.status(400).json({ success: false, message: 'Comment must be between 1 and 5000 characters' });
+    }
     const comment = new Comment({
       postId,
       authorId: req.user.id,

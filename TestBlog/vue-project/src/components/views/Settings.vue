@@ -165,35 +165,19 @@ const setActiveTab = (tabId) => {
 }
 
 const handleProfileUpdate = async (profileData) => {
-  loading.value = true
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    emit('settings-updated', { type: 'profile', data: profileData })
-    showSuccess('Profile updated successfully!')
-  } catch (error) {
-    showError('Failed to update profile. Please try again.')
-  } finally {
-    loading.value = false
-  }
+  emit('settings-updated', { type: 'profile', data: profileData })
 }
 
 const refreshData = () => {
-  loading.value = true
   emit('refresh-data')
-  setTimeout(() => {
-    loading.value = false
-    showSuccess('Data refreshed successfully!')
-  }, 1000)
+  showError('Refreshing settings is unavailable because no refresh endpoint is configured.')
 }
 
 const handleHelp = () => {
-  showSuccess('Redirecting to help center...')
-  // In a real app, this would open help documentation or contact support
+  showError('Help center is unavailable because no support endpoint is configured.')
 }
 
 const handleAvatarError = (event) => {
-  console.warn('Avatar image failed to load, using fallback')
   event.target.style.display = 'none'
 }
 
@@ -217,8 +201,6 @@ const showError = (message) => {
 
 // Initialize component
 onMounted(() => {
-  console.log('Settings component mounted with user:', props.currentUser)
-  
   // Set initial tab based on URL hash or default to profile
   const hash = window.location.hash.replace('#', '')
   if (hash && tabs.some(tab => tab.id === hash)) {

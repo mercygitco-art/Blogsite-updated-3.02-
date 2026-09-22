@@ -403,8 +403,6 @@ export default {
         // Loading Methods
         async loadMore() {
             this.loadingMore = true
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000))
             this.visiblePosts += 9
             this.loadingMore = false
         },
@@ -441,21 +439,7 @@ export default {
         async subscribeNewsletter() {
             if (!this.validateEmail()) return
             
-            this.subscribing = true
-            try {
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1500))
-                this.subscriptionSuccess = true
-                this.email = ''
-                setTimeout(() => {
-                    this.subscriptionSuccess = false
-                }, 5000)
-                this.$emit('subscribe-newsletter', this.email)
-            } catch (error) {
-                this.emailError = 'Subscription failed. Please try again.'
-            } finally {
-                this.subscribing = false
-            }
+            this.emailError = 'Newsletter subscriptions are unavailable because no backend endpoint is configured.'
         },
         validateEmail() {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -496,17 +480,12 @@ export default {
             type()
         },
         refreshLatestPost() {
-            this.refreshing = true
-            // Simulate refresh
-            setTimeout(() => {
-                this.refreshing = false
-            }, 1000)
+            this.emailError = 'Refreshing the latest post is unavailable because posts are already loaded locally.'
         },
 
         // UI Methods
         showCommunity() {
-            // Navigate to community page or show modal
-            console.log('Show community features')
+            this.emailError = 'Community features are unavailable because no backend endpoint is configured.'
         },
         setupScrollListener() {
             this.handleScroll = () => {

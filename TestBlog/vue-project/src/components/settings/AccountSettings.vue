@@ -462,6 +462,8 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { authAPI } from '../../api/auth.js'
+import { userSettingsAPI } from '../../api/usersettings.js'
 
 const props = defineProps({
   user: {
@@ -535,8 +537,6 @@ const isDeleteConfirmed = computed(() => {
 
 // Methods
 const initializeData = () => {
-  console.log('Initializing AccountSettings with user:', props.user)
-  
   if (props.user.preferences) {
     preferences.value = { ...preferences.value, ...props.user.preferences }
   }
@@ -555,39 +555,12 @@ const initializeData = () => {
 }
 
 const loadActiveSessions = () => {
-  // Mock data - replace with actual API call
-  activeSessions.value = [
-    {
-      id: '1',
-      device: 'Chrome on Windows',
-      location: 'New York, US',
-      lastActive: new Date(),
-      current: true,
-      ip: '192.168.1.1'
-    },
-    {
-      id: '2',
-      device: 'Safari on iPhone',
-      location: 'San Francisco, US',
-      lastActive: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-      current: false,
-      ip: '192.168.1.2'
-    },
-    {
-      id: '3',
-      device: 'Firefox on Mac',
-      location: 'London, UK',
-      lastActive: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-      current: false,
-      ip: '192.168.1.3'
-    }
-  ]
+  activeSessions.value = []
 }
 
 const savePreferences = async () => {
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await userSettingsAPI.updateMySettings({ preferences: preferences.value })
     emit('update-account', { 
       type: 'preferences',
       data: preferences.value 
@@ -600,8 +573,7 @@ const savePreferences = async () => {
 
 const toggleTwoFactor = async () => {
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await userSettingsAPI.updateMySettings({ security: { twoFactorEnabled: !security.value.twoFactorEnabled } })
     security.value.twoFactorEnabled = !security.value.twoFactorEnabled
     emit('update-account', { 
       type: 'security',
@@ -627,8 +599,7 @@ const changePassword = async () => {
       throw new Error('Please fix the validation errors')
     }
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await authAPI.changePassword({ currentPassword: password.value.current, newPassword: password.value.new })
     
     // Update last changed date
     passwordLastChanged.value = new Date()
@@ -731,91 +702,37 @@ const checkPasswordStrength = () => {
 }
 
 const terminateSession = async (sessionId) => {
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    activeSessions.value = activeSessions.value.filter(s => s.id !== sessionId)
-    showSuccess('Session terminated successfully')
-  } catch (error) {
-    showError('Failed to terminate session')
-  }
+  showError('Session termination is unavailable because no session endpoint is configured.')
 }
 
 const terminateAllSessions = async () => {
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    activeSessions.value = activeSessions.value.filter(s => s.current)
-    showSuccess('All other sessions terminated')
-    showSessionsModal.value = false
-  } catch (error) {
-    showError('Failed to terminate sessions')
-  }
+  showError('Session termination is unavailable because no session endpoint is configured.')
 }
 
 const exportData = async () => {
   exportingData.value = true
-  try {
-    // Simulate API export
-    await new Promise(resolve => setTimeout(resolve, 3000))
-    showSuccess('Data export started. You will receive an email when your data is ready to download.')
-  } catch (error) {
-    showError('Failed to export data')
-  } finally {
-    exportingData.value = false
-  }
+  showError('Data export is unavailable because no export endpoint is configured.')
+  exportingData.value = false
 }
 
 const clearSearchHistory = async () => {
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    showSuccess('Search history cleared successfully')
-  } catch (error) {
-    showError('Failed to clear search history')
-  }
+  showError('Clearing search history is unavailable because no history endpoint is configured.')
 }
 
 const deactivateAccount = async () => {
   if (!deactivateConfirmationPassword.value) return
   
   deactivatingAccount.value = true
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    showSuccess('Account deactivated successfully')
-    showDeactivateConfirmation.value = false
-    deactivateConfirmationPassword.value = ''
-    
-    // Emit event for parent to handle
-    emit('update-account', { type: 'deactivate' })
-    
-  } catch (error) {
-    showError('Failed to deactivate account')
-  } finally {
-    deactivatingAccount.value = false
-  }
+  showError('Account deactivation is unavailable because no backend endpoint is configured.')
+  deactivatingAccount.value = false
 }
 
 const deleteAccount = async () => {
   if (!isDeleteConfirmed.value) return
   
   deletingAccount.value = true
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    showSuccess('Account deletion initiated. You will receive a confirmation email.')
-    showDeleteConfirmation.value = false
-    deleteConfirmationText.value = ''
-    
-    // Emit event for parent to handle
-    emit('update-account', { type: 'delete' })
-    
-  } catch (error) {
-    showError('Failed to delete account')
-  } finally {
-    deletingAccount.value = false
-  }
+  showError('Account deletion is unavailable because no backend endpoint is configured.')
+  deletingAccount.value = false
 }
 
 const getDeviceIcon = (device) => {

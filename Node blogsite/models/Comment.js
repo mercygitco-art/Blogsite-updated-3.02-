@@ -7,6 +7,8 @@ const commentSchema = new mongoose.Schema(
     authorName: { type: String },
     content: { type: String, required: true },
     likes: { type: Number, default: 0 },
+    // Comments use a separate moderation lifecycle from posts:
+    // pending -> approved. Post statuses are draft/published/archived.
     status: { type: String, enum: ['approved', 'pending'], default: 'pending' },
     isEdited: { type: Boolean, default: false }
   },

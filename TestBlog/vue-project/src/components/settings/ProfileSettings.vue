@@ -327,6 +327,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { authAPI } from '../../api/auth.js'
 
 const props = defineProps({
   user: {
@@ -521,16 +522,9 @@ const checkUsernameAvailability = async () => {
   
   usernameChecking.value = true
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Mock availability check
-    const takenUsernames = ['admin', 'test', 'user']
-    if (takenUsernames.includes(formData.value.username.toLowerCase())) {
-      fieldErrors.value.username = 'This username is already taken'
-    }
+    fieldErrors.value.username = 'Username availability cannot be checked until backend support is available'
   } catch (error) {
-    console.error('Error checking username:', error)
+    fieldErrors.value.username = 'Unable to check username availability'
   } finally {
     usernameChecking.value = false
   }
@@ -553,11 +547,10 @@ const saveProfile = async () => {
       throw new Error('Please fix the validation errors')
     }
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const updatedProfile = await authAPI.updateProfile(JSON.parse(JSON.stringify(formData.value)))
     
     // Emit update event
-    emit('update-profile', JSON.parse(JSON.stringify(formData.value)))
+    emit('update-profile', updatedProfile || JSON.parse(JSON.stringify(formData.value)))
     
     // Update original data
     originalData.value = JSON.parse(JSON.stringify(formData.value))
@@ -570,7 +563,6 @@ const saveProfile = async () => {
     }, 3000)
     
   } catch (error) {
-    console.error('Error saving profile:', error)
     successMessage.value = error.message || 'Failed to save profile. Please try again.'
   } finally {
     saving.value = false
@@ -625,14 +617,11 @@ const removeAvatar = () => {
 }
 
 const handleImageError = () => {
-  console.warn('Failed to load avatar image')
   formData.value.avatar = '' // Fallback to default avatar
 }
 
 const verifyEmail = () => {
-  // In a real app, this would trigger email verification
-  console.log('Sending verification email to:', formData.value.email)
-  successMessage.value = 'Verification email sent!'
+  successMessage.value = 'Email verification is unavailable because the backend does not support it yet.'
   setTimeout(() => {
     successMessage.value = ''
   }, 3000)

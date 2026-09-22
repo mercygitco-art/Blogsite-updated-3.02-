@@ -23,8 +23,8 @@
             <i class="fas fa-check-circle"></i>
           </div>
           <div class="stat-content">
-            <h3>{{ approvedCount }}</h3>
-            <p>Approved Posts</p>
+            <h3>{{ publishedCount }}</h3>
+            <p>Published Posts</p>
           </div>
         </div>
         <div class="stat-card">
@@ -32,8 +32,8 @@
             <i class="fas fa-times-circle"></i>
           </div>
           <div class="stat-content">
-            <h3>{{ rejectedCount }}</h3>
-            <p>Rejected Posts</p>
+            <h3>{{ archivedCount }}</h3>
+            <p>Archived Posts</p>
           </div>
         </div>
         <div class="stat-card">
@@ -51,31 +51,31 @@
       <div class="tabs-container">
         <div class="tabs">
           <button
-            :class="{ active: activeTab === 'pending' }"
-            @click="activeTab = 'pending'"
+            :class="{ active: activeTab === 'draft' }"
+            @click="activeTab = 'draft'"
             class="tab-btn"
           >
             <i class="fas fa-clock"></i>
-            Pending
+            Draft
             <span class="tab-count">{{ pendingCount }}</span>
           </button>
           <button
-            :class="{ active: activeTab === 'approved' }"
-            @click="activeTab = 'approved'"
+            :class="{ active: activeTab === 'published' }"
+            @click="activeTab = 'published'"
             class="tab-btn"
           >
             <i class="fas fa-check-circle"></i>
-            Approved
-            <span class="tab-count">{{ approvedCount }}</span>
+            Published
+            <span class="tab-count">{{ publishedCount }}</span>
           </button>
           <button
-            :class="{ active: activeTab === 'rejected' }"
-            @click="activeTab = 'rejected'"
+            :class="{ active: activeTab === 'archived' }"
+            @click="activeTab = 'archived'"
             class="tab-btn"
           >
             <i class="fas fa-times-circle"></i>
-            Rejected
-            <span class="tab-count">{{ rejectedCount }}</span>
+            Archived
+            <span class="tab-count">{{ archivedCount }}</span>
           </button>
         </div>
       </div>
@@ -102,9 +102,9 @@
           <div class="filter-group">
             <select v-model="selectedStatus" class="filter-select">
               <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
             </select>
 
             <select v-model="selectedCategory" class="filter-select">
@@ -179,7 +179,7 @@
 
           <div class="post-actions">
             <button
-              v-if="post.status === 'pending'"
+              v-if="post.status === 'draft'"
               @click="$emit('approve-post', post.id)"
               class="btn btn-success"
             >
@@ -187,7 +187,7 @@
               Approve
             </button>
             <button
-              v-if="post.status === 'pending'"
+              v-if="post.status === 'draft'"
               @click="$emit('reject-post', post.id)"
               class="btn btn-danger"
             >
@@ -212,17 +212,42 @@
 
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { usePosts } from '@/composables/usePosts'
+import { adminPostsAPI } from '@/api/index.js'
 
 const { currentUser, isAdmin } = useAuth()
 const { posts, categories } = usePosts(currentUser)
+const adminPosts = ref([])
+const loading = ref(true)
+const loadError = ref('')
+
+const loadAdminPosts = async () => {
+  loading.value = true
+  loadError.value = ''
+  try {
+    const response = await adminPostsAPI.getPosts()
+    adminPosts.value = (response.posts || []).map(post => ({
+      ...post,
+      id: post.id || post._id,
+      category: post.categoryId?.slug || '',
+      author: post.authorId?.name || post.authorName || 'Unknown author',
+      tags: post.tags || []
+    }))
+  } catch (error) {
+    loadError.value = error.response?.data?.message || 'Unable to load moderation posts.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadAdminPosts)
 
 // Define emitted events
 defineEmits(['approve-post', 'reject-post', 'edit-post', 'delete-post'])
 
-const activeTab = ref('pending')
+const activeTab = ref('draft')
 const searchQuery = ref('')
 const selectedStatus = ref('')
 const selectedCategory = ref('')
@@ -252,7 +277,7 @@ const applySuggestion = (s) => {
 }
 
 const filteredPosts = computed(() => {
-  let filtered = posts.value.filter(post => post.status === activeTab.value)
+  let filtered = adminPosts.value.filter(post => post.status === activeTab.value)
   if (selectedStatus.value) filtered = filtered.filter(post => post.status === selectedStatus.value)
   if (selectedCategory.value) filtered = filtered.filter(post => post.category === selectedCategory.value)
   if (dateFrom.value) filtered = filtered.filter(post => post.createdAt && post.createdAt >= dateFrom.value)
@@ -283,16 +308,16 @@ const filteredPosts = computed(() => {
   return filtered
 })
 
-const pendingCount = computed(() => posts.value.filter(post => post.status === 'pending').length)
-const approvedCount = computed(() => posts.value.filter(post => post.status === 'approved').length)
-const rejectedCount = computed(() => posts.value.filter(post => post.status === 'rejected').length)
-const totalPosts = computed(() => posts.value.length)
+const pendingCount = computed(() => adminPosts.value.filter(post => post.status === 'draft').length)
+const publishedCount = computed(() => adminPosts.value.filter(post => post.status === 'published').length)
+const archivedCount = computed(() => adminPosts.value.filter(post => post.status === 'archived').length)
+const totalPosts = computed(() => adminPosts.value.length)
 
 function getStatusIcon(status) {
   switch (status) {
-    case 'pending': return 'fas fa-clock'
-    case 'approved': return 'fas fa-check-circle'
-    case 'rejected': return 'fas fa-times-circle'
+    case 'draft': return 'fas fa-clock'
+    case 'published': return 'fas fa-check-circle'
+    case 'archived': return 'fas fa-archive'
     default: return 'fas fa-question-circle'
   }
 }
@@ -588,17 +613,17 @@ function formatDate(date) {
   flex-shrink: 0;
 }
 
-.status-badge.pending {
+.status-badge.draft {
   background: #fff3cd;
   color: #856404;
 }
 
-.status-badge.approved {
+.status-badge.published {
   background: #d4edda;
   color: #155724;
 }
 
-.status-badge.rejected {
+.status-badge.archived {
   background: #f8d7da;
   color: #721c24;
 }
@@ -782,17 +807,17 @@ body.dark-mode .search-suggestions li:hover {
   background: #333;
 }
 
-body.dark-mode .status-badge.pending {
+body.dark-mode .status-badge.draft {
   background: rgba(255, 193, 7, 0.2);
   color: #ffc107;
 }
 
-body.dark-mode .status-badge.approved {
+body.dark-mode .status-badge.published {
   background: rgba(40, 167, 69, 0.2);
   color: #28a745;
 }
 
-body.dark-mode .status-badge.rejected {
+body.dark-mode .status-badge.archived {
   background: rgba(220, 53, 69, 0.2);
   color: #dc3545;
 }

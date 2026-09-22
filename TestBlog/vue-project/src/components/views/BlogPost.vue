@@ -398,6 +398,7 @@ export default {
     },
     emits: [
         'toggle-like', 
+        'toggle-save',
 
         'share-post', 
         'back-to-home',
@@ -600,16 +601,11 @@ export default {
             
             this.likeLoading = true
             this.$emit('toggle-like', this.post.id)
-            
-            // Simulate API call completion
-            setTimeout(() => {
-                this.likeLoading = false
-            }, 500)
+            this.likeLoading = false
         },
 
         toggleBookmark() {
-            this.isBookmarked = !this.isBookmarked
-            // In a real app, you'd call an API here
+            this.$emit('toggle-save', this.post.id)
         },
 
         // Sharing

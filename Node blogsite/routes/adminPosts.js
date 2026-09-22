@@ -5,6 +5,25 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
 const slugify = require('slugify');
 const sanitizeHtml = require('sanitize-html');
 
+const allowedStatuses = ['draft', 'published', 'archived'];
+const validatePostInput = (body, partial = false) => {
+  if (!partial && (!body.title || !body.content)) return 'Title and content required';
+  if (body.title !== undefined && (typeof body.title !== 'string' || body.title.trim().length > 160)) {
+    return 'Title must be 160 characters or fewer';
+  }
+  if (body.content !== undefined && (typeof body.content !== 'string' || body.content.length > 200000)) {
+    return 'Content must be 200,000 characters or fewer';
+  }
+  if (body.status !== undefined && !allowedStatuses.includes(body.status)) {
+    return 'Invalid post status';
+  }
+  if (body.categoryId !== undefined && body.categoryId !== null &&
+      !/^[a-f\d]{24}$/i.test(String(body.categoryId))) {
+    return 'Invalid category';
+  }
+  return null;
+};
+
 const cleanPostHtml = (content) => sanitizeHtml(content, {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
   allowedAttributes: {
@@ -17,11 +36,29 @@ const cleanPostHtml = (content) => sanitizeHtml(content, {
 // All admin routes require authentication and admin role
 router.use(authenticate, requireAdmin);
 
+// GET /api/admin/posts
+router.get('/', async (req, res) => {
+  try {
+    const status = ['draft', 'published', 'archived'].includes(req.query.status)
+      ? req.query.status
+      : undefined;
+    const filter = status ? { status } : {};
+    const posts = await Post.find(filter)
+      .populate('categoryId', 'name slug')
+      .populate('authorId', 'name avatar')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, posts, total: posts.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Unable to load admin posts' });
+  }
+});
+
 // POST /api/admin/posts
 router.post('/', async (req, res) => {
   try {
     const body = req.body;
-    if (!body.title || !body.content) return res.status(400).json({ success: false, message: 'Title and content required' });
+    const validationError = validatePostInput(body);
+    if (validationError) return res.status(400).json({ success: false, message: validationError });
     const post = new Post({
       title: body.title,
       excerpt: body.excerpt || (body.content || '').substring(0, 150),
@@ -38,7 +75,7 @@ router.post('/', async (req, res) => {
     await post.save();
     res.status(201).json({ success: true, post, message: 'Post created' });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Create error', error: err.message });
+    res.status(400).json({ success: false, message: 'Unable to create post' });
   }
 });
 
@@ -48,6 +85,8 @@ router.put('/:id', async (req, res) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
     const body = req.body;
+    const validationError = validatePostInput(body, true);
+    if (validationError) return res.status(400).json({ success: false, message: validationError });
     Object.assign(post, {
       title: body.title ?? post.title,
       excerpt: body.excerpt ?? post.excerpt,
@@ -62,7 +101,7 @@ router.put('/:id', async (req, res) => {
     await post.save();
     res.status(200).json({ success: true, post, message: 'Post updated' });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Update error', error: err.message });
+    res.status(400).json({ success: false, message: 'Unable to update post' });
   }
 });
 
@@ -73,7 +112,7 @@ router.delete('/:id', async (req, res) => {
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
     res.status(200).json({ success: true, message: 'Post deleted' });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Delete error', error: err.message });
+    res.status(400).json({ success: false, message: 'Unable to delete post' });
   }
 });
 

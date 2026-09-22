@@ -10,6 +10,17 @@ const api = axios.create({
   },
 })
 
+let csrfToken = null
+
+api.interceptors.request.use(async (config) => {
+  if (import.meta.env.PROD && !['get', 'head', 'options'].includes(config.method?.toLowerCase()) && !csrfToken) {
+    const response = await api.get('/auth/csrf')
+    csrfToken = response.data.token
+  }
+  if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken
+  return config
+})
+
 // Response interceptor to handle common errors
 api.interceptors.response.use(
   (response) => response,

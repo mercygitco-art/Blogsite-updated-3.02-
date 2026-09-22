@@ -3,25 +3,23 @@ import api from './client.js'
 export const likesAPI = {
   // Get likes for a post
   async getPostLikes(postId) {
-    const response = await api.get(`/posts/${postId}/likes`)
+    const response = await api.get(`/likes/post/${postId}`)
     return response.data
   },
 
   // Like/unlike a post
   async togglePostLike(postId) {
-    const response = await api.post(`/posts/${postId}/like`)
+    const response = await api.post('/likes', { postId })
     return response.data
   },
 
-  // Like/unlike a comment
-  async toggleCommentLike(commentId) {
-    const response = await api.post(`/comments/${commentId}/like`)
+  async isPostLiked(userId, postId) {
+    const response = await api.get(`/likes/check/${userId}/${postId}`)
     return response.data
   },
 
-  // Get user's likes
-  async getUserLikes(userId) {
-    const response = await api.get(`/users/${userId}/likes`)
+  async unlikePost(userId, postId) {
+    const response = await api.delete(`/likes/${userId}/${postId}`)
     return response.data
   }
 }
