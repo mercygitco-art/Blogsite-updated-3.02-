@@ -9,6 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
+const { normalizeConfig } = require('./config/env');
 const { authenticate, requireAdmin } = require('./middleware/auth');
 const { issueCsrfToken, requireCsrf } = require('./middleware/csrf');
 const { requestLogger, writeLog } = require('./middleware/logger');
@@ -24,16 +26,14 @@ const savedPostRoutes = require('./routes/savedPosts');
 const reactionRoutes = require('./routes/reactions');
 const Category = require('./models/Category');
 
+const config = normalizeConfig(process.env);
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.PORT;
 
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-  throw new Error('JWT_SECRET must be configured with at least 32 characters');
-}
+const startServer = async () => {
+  try {
+    await connectDB(config.MONGODB_URI);
 
-// Connect to MongoDB (non-blocking, errors are logged)
-connectDB()
-  .then(async () => {
     const result = await Category.updateOne(
       { slug: 'news' },
       {
@@ -47,25 +47,23 @@ connectDB()
       { upsert: true }
     );
     writeLog('info', 'news_category_ready', { created: Boolean(result.upsertedCount) });
-  })
-  .catch(err => {
+  } catch (err) {
     writeLog('error', 'database_connection_failed', { message: err.message });
-  });
+    throw err;
+  }
+};
 
 // Middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Gzip compression
 app.use(requestLogger);
-const configuredOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
-if (process.env.NODE_ENV === 'production' && !configuredOrigin.startsWith('https://')) {
-  throw new Error('FRONTEND_URL must use HTTPS in production');
-}
+const configuredOrigin = config.FRONTEND_URL;
 app.use(cors({
   origin: (origin, callback) => {
     const developmentOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
-    const allowed = process.env.NODE_ENV !== 'production'
-      ? developmentOrigins.includes(origin) || !origin
-      : origin === configuredOrigin;
+    const allowed = config.isProduction
+      ? origin === configuredOrigin
+      : developmentOrigins.includes(origin) || !origin;
     callback(allowed ? null : new Error('Origin is not allowed by CORS'), allowed);
   },
   credentials: true
@@ -129,10 +127,16 @@ app.get('/api/uploads/:filename', authenticate, (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running'
+app.get('/api/health', async (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  const statusCode = dbStatus === 'connected' ? 200 : 503;
+
+  res.status(statusCode).json({
+    success: dbStatus === 'connected',
+    message: dbStatus === 'connected' ? 'Server is running' : 'Database not ready',
+    environment: config.NODE_ENV,
+    database: dbStatus,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -177,6 +181,28 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  writeLog('info', 'server_started', { port: PORT, environment: process.env.NODE_ENV });
-});
+const startApp = async () => {
+  try {
+    await startServer();
+
+    const server = app.listen(PORT, () => {
+      writeLog('info', 'server_started', { port: PORT, environment: config.NODE_ENV });
+    });
+
+    const shutdown = async (signal) => {
+      writeLog('info', 'server_shutdown_started', { signal });
+      server.close(() => {
+        writeLog('info', 'server_shutdown_complete', { signal });
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+  } catch (error) {
+    writeLog('error', 'startup_failed', { message: error.message, stack: error.stack });
+    process.exit(1);
+  }
+};
+
+startApp();

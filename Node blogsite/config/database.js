@@ -4,25 +4,25 @@ const dns = require('dns');
 // Set DNS servers to resolve SRV queries properly on Windows
 dns.setServers(['8.8.8.8', '8.8.4.4']); // Google DNS
 
-const connectDB = async () => {
+const connectDB = async (uri = process.env.MONGODB_URI) => {
   try {
-    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      throw new Error('MONGODB_URI is required');
+    }
+
     const opts = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 30000,
       connectTimeoutMS: 30000,
       socketTimeoutMS: 45000,
-      family: 4  // Force IPv4
+      family: 4
     };
 
     console.log('Attempting MongoDB connection...');
     await mongoose.connect(uri, opts);
     console.log('✅ MongoDB connected successfully');
+    return mongoose.connection;
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
-    // Don't exit, allow server to run without DB for now
-    console.log('Server running but MongoDB unavailable - will retry');
     throw error;
   }
 };
