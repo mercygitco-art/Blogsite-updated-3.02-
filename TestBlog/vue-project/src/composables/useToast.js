@@ -1,5 +1,44 @@
 import { ref } from 'vue'
 
+export function normalizeToastPayload(message, type = 'info', extra = {}) {
+    const resolvedMessage = typeof message === 'string'
+        ? message
+        : message?.message || 'Something went wrong'
+
+    const resolvedType = typeof type === 'string'
+        ? type
+        : extra.type || 'info'
+
+    return {
+        message: resolvedMessage,
+        type: resolvedType,
+        ...extra,
+        message: resolvedMessage,
+        type: resolvedType
+    }
+}
+
+export function normalizeErrorState(error, fallback = 'Something went wrong') {
+    if (error && typeof error === 'object' && error.message) {
+        return {
+            message: error.message,
+            type: 'error'
+        }
+    }
+
+    if (typeof error === 'string' && error.trim()) {
+        return {
+            message: error,
+            type: 'error'
+        }
+    }
+
+    return {
+        message: fallback,
+        type: 'error'
+    }
+}
+
 export function useToast() {
     const toasts = ref([])
     let toastCounter = 0
@@ -27,14 +66,27 @@ export function useToast() {
 
     // Show a toast with flexible options
     const showToast = (message, options = {}) => {
+        const input = typeof message === 'string'
+            ? { message, type: 'info' }
+            : (message || {})
+
+        const normalizedOptions = typeof options === 'string'
+            ? { type: options }
+            : (options || {})
+
+        const payload = normalizeToastPayload(input.message || input, normalizedOptions.type || input.type || 'info', {
+            ...input,
+            ...normalizedOptions
+        })
+
         const id = toastCounter++
-        const opts = { ...defaultOptions, ...options }
+        const opts = { ...defaultOptions, ...payload }
         
         // Check if we've reached the maximum number of toasts
         if (opts.max > 0 && toasts.value.length >= opts.max) {
             if (opts.queue) {
                 // Queue the toast to show later
-                setTimeout(() => showToast(message, options), 500)
+                setTimeout(() => showToast(payload, opts), 500)
                 return id
             } else {
                 // Remove the oldest toast
@@ -44,7 +96,7 @@ export function useToast() {
 
         const toast = {
             id,
-            message,
+            message: opts.message,
             type: opts.type,
             title: opts.title,
             show: true,
