@@ -3,6 +3,7 @@ const router = express.Router();
 const Category = require('../models/Category');
 const slugify = require('slugify');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { validateRequest, categorySchema, categoryUpdateSchema } = require('../middleware/validate');
 
 // Get all categories
 router.get('/', async (req, res) => {
@@ -26,7 +27,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create category
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+router.post('/', authenticate, requireAdmin, validateRequest(categorySchema), async (req, res) => {
   const category = new Category({
     name: req.body.name,
     slug: req.body.slug || slugify(req.body.name, { lower: true, strict: true }),
@@ -42,7 +43,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Update category
-router.put('/:id', authenticate, requireAdmin, async (req, res) => {
+router.put('/:id', authenticate, requireAdmin, validateRequest(categoryUpdateSchema), async (req, res) => {
   try {
     const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!category) return res.status(404).json({ message: 'Category not found' });

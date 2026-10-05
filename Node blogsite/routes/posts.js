@@ -3,6 +3,7 @@ const router = express.Router();
 const Post = require('../models/Post');
 const Category = require('../models/Category');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { validateRequest, postCreateSchema, postUpdateSchema, searchQuerySchema } = require('../middleware/validate');
 const slugify = require('slugify');
 const sanitizeHtml = require('sanitize-html');
 
@@ -21,15 +22,9 @@ const populatePost = (query) => query
   .populate('authorId', 'name avatar');
 
 // Authenticated users create drafts; admins may publish directly.
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, validateRequest(postCreateSchema), async (req, res) => {
   try {
     const { title, content } = req.body;
-    if (!title || !content) {
-      return res.status(400).json({ success: false, message: 'Title and content are required' });
-    }
-    if (title.trim().length > 160 || content.length > 200000) {
-      return res.status(400).json({ success: false, message: 'Post title or content is too long' });
-    }
 
     const isAdmin = req.user.role === 'admin';
     const post = await Post.create({
@@ -53,7 +48,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticate, async (req, res, next) => {
+router.put('/:id', authenticate, validateRequest(postUpdateSchema), async (req, res, next) => {
   if (req.user.role === 'admin') return next();
 
   try {
@@ -98,7 +93,7 @@ router.delete('/:id', authenticate, async (req, res, next) => {
 });
 
 // Admin-only continuation for the PUT/DELETE routes above.
-router.put('/:id', requireAdmin, async (req, res) => {
+router.put('/:id', requireAdmin, validateRequest(postUpdateSchema), async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
@@ -167,10 +162,9 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/posts/search?q=
-router.get('/search', async (req, res) => {
+router.get('/search', validateRequest(searchQuerySchema, 'query'), async (req, res) => {
   try {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-    if (!q) return res.status(400).json({ success: false, message: 'Search query is required' });
     const search = escapeRegex(q);
     const filter = { $or: [
       { title: { $regex: search, $options: 'i' } },

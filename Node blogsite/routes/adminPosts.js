@@ -2,36 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
 const { authenticate, requireAdmin } = require('../middleware/auth');
-const slugify = require('slugify');
-const sanitizeHtml = require('sanitize-html');
-
-const allowedStatuses = ['draft', 'published', 'archived'];
-const validatePostInput = (body, partial = false) => {
-  if (!partial && (!body.title || !body.content)) return 'Title and content required';
-  if (body.title !== undefined && (typeof body.title !== 'string' || body.title.trim().length > 160)) {
-    return 'Title must be 160 characters or fewer';
-  }
-  if (body.content !== undefined && (typeof body.content !== 'string' || body.content.length > 200000)) {
-    return 'Content must be 200,000 characters or fewer';
-  }
-  if (body.status !== undefined && !allowedStatuses.includes(body.status)) {
-    return 'Invalid post status';
-  }
-  if (body.categoryId !== undefined && body.categoryId !== null &&
-      !/^[a-f\d]{24}$/i.test(String(body.categoryId))) {
-    return 'Invalid category';
-  }
-  return null;
-};
-
-const cleanPostHtml = (content) => sanitizeHtml(content, {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
-  allowedAttributes: {
-    ...sanitizeHtml.defaults.allowedAttributes,
-    img: ['src', 'alt', 'width', 'height']
-  },
-  allowedSchemes: ['http', 'https']
-});
+const { validateRequest, adminPostSchema, adminPostUpdateSchema } = require('../middleware/validate');
+const { buildErrorResponse, buildSuccessResponse } = require('../utils/http');
+const { createPost, updatePost, cleanPostHtml } = require('../services/postService');
 
 // All admin routes require authentication and admin role
 router.use(authenticate, requireAdmin);
@@ -54,54 +27,25 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/admin/posts
-router.post('/', async (req, res) => {
+router.post('/', validateRequest(adminPostSchema), async (req, res) => {
   try {
-    const body = req.body;
-    const validationError = validatePostInput(body);
-    if (validationError) return res.status(400).json({ success: false, message: validationError });
-    const post = new Post({
-      title: body.title,
-      excerpt: body.excerpt || (body.content || '').substring(0, 150),
-      content: cleanPostHtml(body.content),
-      categoryId: body.categoryId,
-      image: body.image,
-      authorId: req.user.id || undefined,
-      authorName: req.user.name || 'Admin',
-      status: body.status || 'draft',
-      slug: body.slug || slugify(body.title, { lower: true, strict: true }),
-      views: body.views || 0,
-      featured: !!body.featured
-    });
-    await post.save();
-    res.status(201).json({ success: true, post, message: 'Post created' });
+    const postQuery = await createPost({ user: req.user, body: req.body });
+    const post = await postQuery;
+    res.status(201).json(buildSuccessResponse({ post }, 'Post created', 201));
   } catch (err) {
-    res.status(400).json({ success: false, message: 'Unable to create post' });
+    const status = err.statusCode || 400;
+    res.status(status).json(buildErrorResponse(status === 400 ? 'Unable to create post' : err.message, status === 400 ? err.message : null, status));
   }
 });
 
 // PUT /api/admin/posts/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateRequest(adminPostUpdateSchema), async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
-    const body = req.body;
-    const validationError = validatePostInput(body, true);
-    if (validationError) return res.status(400).json({ success: false, message: validationError });
-    Object.assign(post, {
-      title: body.title ?? post.title,
-      excerpt: body.excerpt ?? post.excerpt,
-      content: body.content === undefined ? post.content : cleanPostHtml(body.content),
-      categoryId: body.categoryId ?? post.categoryId,
-      image: body.image ?? post.image,
-      status: body.status ?? post.status,
-      slug: body.slug ?? post.slug,
-      views: body.views ?? post.views,
-      featured: body.featured ?? post.featured
-    });
-    await post.save();
-    res.status(200).json({ success: true, post, message: 'Post updated' });
+    const updatedPost = await updatePost({ id: req.params.id, payload: req.body });
+    res.status(200).json(buildSuccessResponse({ post: updatedPost }, 'Post updated', 200));
   } catch (err) {
-    res.status(400).json({ success: false, message: 'Unable to update post' });
+    const status = err.statusCode || 400;
+    res.status(status).json(buildErrorResponse(status === 400 ? 'Unable to update post' : err.message, status === 400 ? err.message : null, status));
   }
 });
 

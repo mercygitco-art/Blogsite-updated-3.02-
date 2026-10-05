@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Comment = require('../models/Comment');
 const { authenticate } = require('../middleware/auth');
+const { validateRequest, commentCreateSchema, commentUpdateSchema } = require('../middleware/validate');
 const sanitizeHtml = require('sanitize-html');
 
 // GET /api/posts/:id/comments  (this router will be mounted at /api/posts)
@@ -16,13 +17,10 @@ router.get('/:id/comments', async (req, res) => {
 });
 
 // POST /api/posts/:id/comments
-router.post('/:id/comments', authenticate, async (req, res) => {
+router.post('/:id/comments', authenticate, validateRequest(commentCreateSchema), async (req, res) => {
   try {
     const postId = req.params.id;
     const { content } = req.body;
-    if (!content || content.trim().length > 5000) {
-      return res.status(400).json({ success: false, message: 'Comment must be between 1 and 5000 characters' });
-    }
     const comment = new Comment({
       postId,
       authorId: req.user.id,
@@ -38,7 +36,7 @@ router.post('/:id/comments', authenticate, async (req, res) => {
 });
 
 // PUT /api/comments/:id (author or admin)
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, validateRequest(commentUpdateSchema), async (req, res) => {
   try {
     const c = await Comment.findById(req.params.id);
     if (!c) return res.status(404).json({ success: false, message: 'Comment not found' });

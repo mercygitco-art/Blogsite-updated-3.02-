@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const SavedPost = require('../models/SavedPost');
 const { authenticate } = require('../middleware/auth');
+const { validateRequest, savedPostSchema } = require('../middleware/validate');
 
 // All saved post routes require authentication
 router.use(authenticate);
@@ -29,7 +30,7 @@ router.get('/check/:userId/:postId', async (req, res) => {
 });
 
 // Save a post
-router.post('/', async (req, res) => {
+router.post('/', validateRequest(savedPostSchema), async (req, res) => {
   const savedPost = new SavedPost({
     userId: req.user.id,
     postId: req.body.postId

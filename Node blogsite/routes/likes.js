@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Like = require('../models/Like');
 const { authenticate } = require('../middleware/auth');
+const { validateRequest, likeSchema, likeUpdateSchema } = require('../middleware/validate');
 
 // All like routes require authentication
 router.use(authenticate);
@@ -28,7 +29,7 @@ router.get('/check/:userId/:postId', async (req, res) => {
 });
 
 // Like a post
-router.post('/', async (req, res) => {
+router.post('/', validateRequest(likeSchema), async (req, res) => {
   const like = new Like({
     userId: req.user.id,
     postId: req.body.postId,
@@ -47,7 +48,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update like type
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateRequest(likeUpdateSchema), async (req, res) => {
   try {
     const like = await Like.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { type: req.body.type }, { new: true });
     if (!like) return res.status(404).json({ message: 'Like not found' });
